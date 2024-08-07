@@ -1,3 +1,4 @@
+import openai
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import AppleHealthStat
@@ -8,7 +9,7 @@ from django.conf import settings
 from openai import OpenAI
 from django.db.models import Sum
 from .utils import get_week_date_range, generate_ai_response
-
+from dotenv import load_dotenv
 
 # openai.api_key = settings.OPENAI_API_KEY
 os.environ['OPENAI_API_KEY'] = settings.OPENAI_API_KEY
