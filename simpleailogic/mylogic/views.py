@@ -13,93 +13,6 @@ from .utils import get_week_date_range, generate_ai_response
 # openai.api_key = settings.OPENAI_API_KEY
 os.environ['OPENAI_API_KEY'] = settings.OPENAI_API_KEY
 
-# class HealthStatsAPIView(APIView):
-    
-#     def get(self, request):
-#         User = get_user_model()
-#         users = User.objects.filter(
-#             apple_health_stat__stepCount__lt=5000
-#         ).distinct()
-#         print("users", users)
-        
-#         response_data = []
-
-#         for user in users:
-#             # Fetch the latest AppleHealthStat entry for the user
-#             apple_health_stat = AppleHealthStat.objects.filter(user=user).last()
-#             print("Apple health stat", apple_health_stat)
-            
-#             # Check sleepAnalysis manually if it's a JSONField containing a list
-#             sleep_analysis_data = apple_health_stat.sleepAnalysis
-            
-#             print("sleep analysis data", sleep_analysis_data)
-#             if sleep_analysis_data:
-#                 # Calculate total sleep time (assuming 'sleep_time' is in seconds)
-#                 total_sleep_time = sum(item.get('sleep_time', 0) for item in sleep_analysis_data)
-#                 if total_sleep_time < 43200:  # Less than 12 hours
-#                     ai_response = generate_ai_response(user)
-#                     response_data.append({
-#                         "user": user.username,
-#                         "ai_response": ai_response
-#                     })
-        
-#         return Response(response_data)
-
-
-# class HealthConditionsAPIView(APIView):
-#     def get(self, request):
-#         User = get_user_model()
-#         # Get date ranges for current and previous weeks
-#         current_week_start, current_week_end = get_week_date_range(0)
-#         previous_week_start, previous_week_end = get_week_date_range(-1)
-        
-#         # Filter users who slept less than 6 hours (21600 seconds) in any sleep session
-#         sleep_condition_users = User.objects.filter(
-#             apple_health_stat__sleepAnalysis__sleep_time__lt=21600
-#         ).distinct()
-        
-#         # Filter users who walked less than 5000 steps
-#         step_1_condition_users = User.objects.filter(
-#             apple_health_stat__stepCount__lt=5000
-#         ).distinct()
-        
-#         # Calculate steps for current and previous weeks
-#         current_week_steps = AppleHealthStat.objects.filter(
-#             created_at__range=(current_week_start, current_week_end)
-#         ).values('user').annotate(total_steps=Sum('stepCount'))
-        
-#         previous_week_steps = AppleHealthStat.objects.filter(
-#             created_at__range=(previous_week_start, previous_week_end)
-#         ).values('user').annotate(total_steps=Sum('stepCount'))
-        
-#         previous_week_steps_dict = {stat['user']: stat['total_steps'] for stat in previous_week_steps}
-        
-#         step_2_condition_users = []
-#         for stat in current_week_steps:
-#             user_id = stat['user']
-#             current_steps = stat['total_steps'] or 0
-#             previous_steps = previous_week_steps_dict.get(user_id, 0)
-            
-#             if previous_steps > 0:  # Avoid division by zero
-#                 percentage_decrease = ((previous_steps - current_steps) / previous_steps) * 100
-#                 if percentage_decrease >= 50:
-#                     user = User.objects.get(id=user_id)
-#                     step_2_condition_users.append(user)
-        
-#         # Combine conditions
-#         combined_users = set(sleep_condition_users) & set(step_1_condition_users) & set(step_2_condition_users)
-        
-#         # Generate response
-#         response_data = []
-#         for user in combined_users:
-#             ai_response = generate_ai_response(user)
-#             response_data.append({
-#                 "user": user.username,
-#                 "ai_response": ai_response
-#             })
-        
-#         return Response(response_data)
-
 class HealthConditionsAPIView(APIView):
     def get(self, request):
         User = get_user_model()
@@ -153,9 +66,6 @@ def filter_users_by_sleep_condition():
 
     return User.objects.filter(id__in=[user.id for user in users_with_short_sleep]).distinct()
 
-
-
-
 def filter_users_by_step_decrease():
     """Filters users who walked 50% less this week compared to the previous week."""
     User = get_user_model()
@@ -163,6 +73,8 @@ def filter_users_by_step_decrease():
     # Get date ranges for current and previous weeks
     current_week_start, current_week_end = get_week_date_range(0)
     previous_week_start, previous_week_end = get_week_date_range(-1)
+    
+    print("dates", current_week_start, current_week_end, previous_week_start, previous_week_end)
 
     # Calculate steps for current and previous weeks
     current_week_steps = AppleHealthStat.objects.filter(
@@ -172,8 +84,14 @@ def filter_users_by_step_decrease():
     previous_week_steps = AppleHealthStat.objects.filter(
         created_at__range=(previous_week_start, previous_week_end)
     ).values('user').annotate(total_steps=Sum('stepCount'))
+    
+    print("data", current_week_steps)
+    previous_week_steps = current_week_steps
+    print("previous", previous_week_steps)
 
     previous_week_steps_dict = {stat['user']: stat['total_steps'] for stat in previous_week_steps}
+    
+    print("stats", previous_week_steps)
     
     step_decrease_users = []
     for stat in current_week_steps:
@@ -183,7 +101,7 @@ def filter_users_by_step_decrease():
         
         if previous_steps > 0:  # Avoid division by zero
             percentage_decrease = ((previous_steps - current_steps) / previous_steps) * 100
-            if percentage_decrease >= 50:
+            if percentage_decrease >= 0:
                 user = User.objects.get(id=user_id)
                 step_decrease_users.append(user)
     

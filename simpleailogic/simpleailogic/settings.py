@@ -124,4 +124,4 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # myproject/settings.py
-OPENAI_API_KEY="your secret key here"
+OPENAI_API_KEY="sk-proj-Rq7ZaXqpnCZ3itXGjPGNT3BlbkFJHzXhsQgxG2KDhI1mtvSF"

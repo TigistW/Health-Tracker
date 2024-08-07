@@ -28,3 +28,4 @@ class AppleHealthStat(models.Model):
 
     def __str__(self):
         return f"Health Data for {self.user.username} on {self.created_at}"
+    

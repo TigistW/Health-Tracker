@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
 import os
@@ -16,25 +17,111 @@ def get_week_date_range(week_offset=0):
     end_date = start_date + timedelta(days=6)
     return start_date, end_date
 
+# def generate_ai_response_old(user):
+#     # Fetch user data
+#     apple_health_stat = AppleHealthStat.objects.filter(user=user).last()
+#     print("apple_health_stat", apple_health_stat)
+#     print(apple_health_stat)
+#     # Create prompt for OpenAI API
+#     prompt = f"Provide advice for a user with the following data: {apple_health_stat}"
+#     client = OpenAI()
+
+#     completion = client.chat.completions.create(
+#     model="gpt-3.5-turbo-0125",
+#     messages=[
+#             {"role": "system", "content": "You are a helpful assistant."},
+#             {"role": "user", "content": prompt}
+#         ],
+#         max_tokens=150
+#     )
+#     print(completion.choices[0].message)
+#     answer = completion.choices[0].message
+#     return answer
+
 def generate_ai_response(user):
-    # Fetch user data
+    analysis = generate_analysis(user)
+    if not analysis:
+        return "I couldn't find any data to analyze for you."
+
+    sleep_data = analysis['sleep_by_date']
+    step_data = analysis['step_data']
+
+    # Example analysis
+    avg_sleep = sum(sleep_data.values()) / len(sleep_data) if sleep_data else 0
+    advice = f"Hello, {user.username}. Based on your recent health data, you have been sleeping an average of {avg_sleep / 3600:.2f} hours per night."
+
+    if step_data:
+        advice += f" You walked a total of {step_data} steps recently. Keep up the good work!"
+    
+    return advice
+
+# Utility functions for analysis
+def organize_sleep_data(sleep_data):
+    sleep_by_date = defaultdict(int)
+    for entry in sleep_data:
+        date_str = entry['date'].split()[0]  # Extract the date part (YYYY-MM-DD)
+        sleep_time = entry['sleep_time']
+        sleep_by_date[date_str] += sleep_time
+    return sleep_by_date
+
+def generate_analysis(user):
     apple_health_stat = AppleHealthStat.objects.filter(user=user).last()
-    
-    # Create prompt for OpenAI API
-    prompt = f"Provide advice for a user with the following data: {apple_health_stat}"
-    
-    client = OpenAI()
+    if not apple_health_stat:
+        return None
 
-    completion = client.chat.completions.create(
-    model="gpt-3.5-turbo-0125",
-    messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=150
-    )
-    print(completion.choices[0].message)
+    # Organize sleep data
+    sleep_data = apple_health_stat.sleepAnalysis
+    sleep_by_date = organize_sleep_data(sleep_data)
 
-    answer = completion.choices[0].message
+    # Analyze step count data
+    step_data = apple_health_stat.stepCount
+
+    analysis = {
+        'sleep_by_date': sleep_by_date,
+        'step_data': step_data,
+    }
     
-    return answer
+    return analysis
+
+
+# from datetime import datetime
+# from collections import defaultdict
+# from django.contrib.auth import get_user_model
+# from .models import AppleHealthStat
+# import openai
+# from django.conf import settings
+# from rest_framework.views import APIView
+# from rest_framework.response import Response
+# from rest_framework import status
+
+# openai.api_key = settings.OPENAI_API_KEY
+
+# User = get_user_model()
+
+# def organize_sleep_data(sleep_data):
+#     sleep_by_date = defaultdict(int)
+#     for entry in sleep_data:
+#         date_str = entry['date'].split()[0]  # Extract the date part (YYYY-MM-DD)
+#         sleep_time = entry['sleep_time']
+#         sleep_by_date[date_str] += sleep_time
+#     return sleep_by_date
+
+# def generate_analysis(user):
+#     apple_health_stat = AppleHealthStat.objects.filter(user=user).last()
+#     if not apple_health_stat:
+#         return None
+
+#     # Organize sleep data
+#     sleep_data = apple_health_stat.sleepAnalysis
+#     sleep_by_date = organize_sleep_data(sleep_data)
+
+#     # Analyze step count data
+#     step_data = apple_health_stat.stepCount
+
+#     analysis = {
+#         'sleep_by_date': sleep_by_date,
+#         'step_data': step_data,
+#         # Add more analysis as needed
+#     }
+    
+#     return analysis
